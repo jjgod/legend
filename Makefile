@@ -1,5 +1,5 @@
 CFLAGS = -Wall
-LDFLAGS = -lSDL -Bstatic -lSDL_image -lSDL_ttf -llua -Bdynamic
+LDFLAGS = -lSDL -lSDL_image -lSDL_ttf -llua
 OBJECTS = legend.o ui.o scripting.o
 
 legend: $(OBJECTS)

@@ -7,30 +7,47 @@
 
 lua_State *config_state;
 
+static int lua_get_table(lua_State *L, const char *name)
+{
+    lua_getglobal(L, name);
+    if (! lua_istable(L, -1))
+        return -1;
+
+    return 0;
+}
+
+static int number_from_stack(lua_State *L)
+{
+    if (! lua_isnumber(L, -1))
+        return -1;
+
+    int ret = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    return ret;
+}
+
+static const char *str_from_stack(lua_State *L)
+{
+    if (! lua_isstring(L, -1))
+        return NULL;
+
+    const char *ret = lua_tostring(L, -1);
+    lua_pop(L, 1);
+    return ret;
+}
+
 static int lua_get_number(lua_State *L, const char *name)
 {
     lua_getglobal(L, name);
 
-    if (! lua_isnumber(L, -1))
-    {
-        fprintf(stderr, "'%s' should be a number.\n", name);
-        return -1;
-    }
-
-    return lua_tointeger(L, -1);
+    return number_from_stack(L);
 }
 
 static const char *lua_get_str(lua_State *L, const char *name)
 {
     lua_getglobal(L, name);
 
-    if (! lua_isstring(L, -1))
-    {
-        fprintf(stderr, "'%s' should be a string.\n", name);
-        return NULL;
-    }
-
-    return lua_tostring(L, -1);
+    return str_from_stack(L);
 }
 
 static int lua_set_title(lua_State *L)
@@ -84,5 +101,29 @@ int config_get_int(const char *name)
 const char *config_get_str(const char *name)
 {
     return lua_get_str(config_state, name);
+}
+
+int config_get_int_from_table(const char *table, const char *name)
+{
+    if (lua_get_table(config_state, table))
+        return -1;
+
+    lua_getfield(config_state, -1, name);
+
+    int ret = number_from_stack(config_state);
+    lua_pop(config_state, -1);
+    return ret;
+}
+
+const char *config_get_str_from_table(const char *table, const char *name)
+{
+    if (lua_get_table(config_state, table))
+        return NULL;
+
+    lua_getfield(config_state, -1, name);
+
+    const char *str = str_from_stack(config_state);
+    lua_pop(config_state, -1);
+    return str;
 }
 

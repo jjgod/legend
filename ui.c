@@ -2,13 +2,48 @@
 
 #include <SDL/SDL.h>
 #include <SDL/SDL_image.h>
+#include <SDL/SDL_ttf.h>
 #include "config.h"
 
 SDL_Surface *screen;
+TTF_Font *chinese_font, *english_font;
+
+static TTF_Font *get_font(const char *name)
+{
+    TTF_Font *font = TTF_OpenFont(config_get_str_from_table(name, "path"),
+                                  config_get_int_from_table(name, "size"));
+
+    if (! font)
+    {
+        fprintf(stderr, "Failed to find font: %s\n", SDL_GetError());
+        exit(-1);
+    }
+
+    return font;
+}
+
+int font_init()
+{
+    TTF_Init();
+
+    chinese_font = get_font("chinese_font");
+    english_font = get_font("english_font");
+
+    return chinese_font && english_font;
+}
+
+void font_done()
+{
+    TTF_CloseFont(chinese_font);
+    TTF_CloseFont(english_font);
+    TTF_Quit();
+}
 
 int ui_init()
 {
     int width, height;
+
+    font_init();
 
     width = config_get_int("width");
     height = config_get_int("height");
@@ -63,6 +98,7 @@ int ui_loop()
 
 void ui_done()
 {
+    font_done();
     SDL_Quit();
 }
 
