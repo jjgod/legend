@@ -88,10 +88,24 @@ static int lua_draw_centerd_text(lua_State *L)
     return 0;
 }
 
+static int lua_show_image(lua_State *L)
+{
+    const char *path = lua_tostring(L, 1);
+    int x, y, flags;
+
+    x = lua_tointeger(L, 2);
+    y = lua_tointeger(L, 3);
+    flags = lua_tointeger(L, 4);
+
+    ui_show_image(path, x, y, flags);
+    return 0;
+}
+
 static const struct luaL_Reg ui_lib[] = {
     { "set_title",         lua_set_title },
     { "draw_text",         lua_draw_text },
     { "draw_centerd_text", lua_draw_centerd_text },
+    { "show_image",        lua_show_image },
     { NULL, NULL },
 };
 

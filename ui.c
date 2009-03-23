@@ -3,11 +3,26 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_image.h>
 #include <SDL/SDL_ttf.h>
+#include "ui.h"
 #include "config.h"
 #include "scripting.h"
 
 SDL_Surface *screen;
 TTF_Font *chinese_font, *english_font;
+
+struct fade_effect {
+    SDL_TimerID timer;
+
+    int alpha;
+    int max;
+    int step;
+
+    int x;
+    int y;
+
+    SDL_Surface *src;
+    SDL_Surface *dest;
+};
 
 static TTF_Font *get_font(const char *name)
 {
@@ -31,64 +46,66 @@ static void render_text(SDL_Surface *sur,
 {
     SDL_Surface *textSur = TTF_RenderUTF8_Blended(font, text, color);
 
-    SDL_Rect dest = { x, y, 0, 0 };
+    SDL_Rect dest = { x, y, textSur->w, textSur->h };
+
+    SDL_FillRect(sur, &dest, 0);
     SDL_BlitSurface(textSur, NULL, sur, &dest);
 
     SDL_FreeSurface(textSur);
 }
 
-#define	INVALID	0x80000000
+#define INVALID 0x80000000
 
-#define	get(c)	c = *strptr++; \
-	if (chars) (*chars)++; \
-	if ((c) == 0) return (unsigned int)EOF
+#define get(c)  c = *strptr++; \
+    if (chars) (*chars)++; \
+    if ((c) == 0) return (unsigned int)EOF
 
 unsigned int sgetu8(unsigned char *strptr, int *chars)
 {
-	unsigned int c;
-	int i, iterations;
-	unsigned char ch;
+    unsigned int c;
+    int i, iterations;
+    unsigned char ch;
 
-	if (chars) *chars = 0;
+    if (chars) *chars = 0;
 
-	if (strptr == NULL)
-		return (unsigned int)EOF;
+    if (strptr == NULL)
+        return (unsigned int)EOF;
 
-	get(c);
+    get(c);
 
-	if ((c & 0xFE) == 0xFC) {
-		c &= 0x01;
-		iterations = 5;
-	}
-	else if ((c & 0xFC) == 0xF8) {
-		c &= 0x03;
-		iterations = 4;
-	}
-	else if ((c & 0xF8) == 0xF0) {
-		c &= 0x07;
-		iterations = 3;
-	}
-	else if ((c & 0xF0) == 0xE0) {
-		c &= 0x0F;
-		iterations = 2;
-	}
-	else if ((c & 0xE0) == 0xC0) {
-		c &= 0x1F;
-		iterations = 1;
-	}
-	else if ((c & 0x80) == 0x80)
-		return INVALID;
-	else return c;
+    if ((c & 0xFE) == 0xFC) {
+        c &= 0x01;
+        iterations = 5;
+    }
+    else if ((c & 0xFC) == 0xF8) {
+        c &= 0x03;
+        iterations = 4;
+    }
+    else if ((c & 0xF8) == 0xF0) {
+        c &= 0x07;
+        iterations = 3;
+    }
+    else if ((c & 0xF0) == 0xE0) {
+        c &= 0x0F;
+        iterations = 2;
+    }
+    else if ((c & 0xE0) == 0xC0) {
+        c &= 0x1F;
+        iterations = 1;
+    }
+    else if ((c & 0x80) == 0x80)
+        return INVALID;
+    else return c;
 
-	for (i = 0; i < iterations; i++) {
-		get(ch);
-		if ((ch & 0xC0) != 0x80)
-			return INVALID;
-		c <<= 6;
-		c |= ch & 0x3F;
-	}
+    for (i = 0; i < iterations; i++) {
+        get(ch);
+        if ((ch & 0xC0) != 0x80)
+            return INVALID;
+        c <<= 6;
+        c |= ch & 0x3F;
+    }
 
-	return c;
+    return c;
 }
 
 enum lang_state {
@@ -285,7 +302,7 @@ int ui_init()
     }
 
     scripting_init_ui();
-	SDL_UpdateRect(screen, 0, 0, 0, 0);
+    SDL_Flip(screen);
 
     return 0;
 }
@@ -300,7 +317,6 @@ int ui_loop()
         switch (event.type)
         {
         case SDL_KEYDOWN:
-            // Quit when user presses a key.
             done = 1;
             break;
 
@@ -351,5 +367,38 @@ void ui_draw_centerd_text(const char *text, int y, unsigned int c)
     x = (screen->w - w) / 2;
 
     draw_text(screen, text, x, y, color_from_int(c));
+}
+
+int ui_show_image(const char *path, int x, int y, int flags)
+{
+    SDL_Surface *image = IMG_Load(path);
+
+    if (! image)
+        return -1;
+
+    if (flags & UI_SHOW_IMAGE_CENTERED)
+        x = (screen->w - image->w) / 2;
+
+    SDL_Rect dest = { x, y, image->w, image->h };
+
+    if (flags & UI_SHOW_IMAGE_FADE_IN)
+    {
+        int i;
+
+        for (i = 0; i < 35; i++)
+        {
+            SDL_Delay(15);
+            SDL_SetAlpha(image, SDL_SRCALPHA, i);
+            SDL_BlitSurface(image, NULL, screen, &dest);
+            SDL_Flip(screen);
+        }
+    }
+    else
+    {
+        SDL_BlitSurface(image, NULL, screen, &dest);
+        SDL_Flip(screen);
+    }
+
+    return 0;
 }
 
