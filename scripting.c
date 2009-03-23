@@ -59,8 +59,39 @@ static int lua_set_title(lua_State *L)
     return 0;
 }
 
+static int lua_draw_text(lua_State *L)
+{
+    const char *text = lua_tostring(L, 1);
+    int x, y;
+    unsigned int color;
+
+    x = lua_tointeger(L, 2);
+    y = lua_tointeger(L, 3);
+    color = lua_tointeger(L, 4);
+
+    ui_draw_text(text, x, y, color);
+
+    return 0;
+}
+
+static int lua_draw_centerd_text(lua_State *L)
+{
+    const char *text = lua_tostring(L, 1);
+    int y;
+    unsigned int color;
+
+    y = lua_tointeger(L, 2);
+    color = lua_tointeger(L, 3);
+
+    ui_draw_centerd_text(text, y, color);
+
+    return 0;
+}
+
 static const struct luaL_Reg ui_lib[] = {
-    { "set_title", lua_set_title },
+    { "set_title",         lua_set_title },
+    { "draw_text",         lua_draw_text },
+    { "draw_centerd_text", lua_draw_centerd_text },
     { NULL, NULL },
 };
 
@@ -77,10 +108,15 @@ int scripting_init()
         return -1;
     }
 
-    lua_getglobal(config_state, "init");
+    return 0;
+}
+
+int scripting_init_ui()
+{
+    lua_getglobal(config_state, "init_ui");
     if (lua_pcall(config_state, 0, 0, 0))
     {
-        fprintf(stderr, "Error running function 'init': %s.\n",
+        fprintf(stderr, "Error running function 'init_ui': %s.\n",
                 lua_tostring(config_state, -1));
         return -1;
     }
